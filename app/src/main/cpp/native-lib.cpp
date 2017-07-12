@@ -1,7 +1,7 @@
 #include <jni.h>
 
+#include <random>
 #include <chrono>
-#include <unistd.h>
 #include <android/log.h>
 #define  LOG_TAG    "fft_benchmark"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -22,11 +22,13 @@ Java_com_wavelethealth_fft_1benchmark_MainActivity_fftBenchmark(
     const int nfft = 16384;
     int samplingRate = 86; // Hz
 
-    // generate sample input signal
+    // generate sample input signal, a 10 Hz sine wave plus white noise
     float testSignal[nfft];
     int testSignalFrq = 10; // Hz
+    default_random_engine generator;
+    normal_distribution<float> dist(0, 0.5);
     for (int i=0; i<nfft; i++) {
-        testSignal[i] = (float)sin(2.0*3.141593*testSignalFrq*i/samplingRate);
+        testSignal[i] = (float)sin(2.0*3.141593*testSignalFrq*i/samplingRate) + dist(generator);
     }
 
     // need to allocate memory for kissfft
@@ -71,7 +73,7 @@ Java_com_wavelethealth_fft_1benchmark_MainActivity_fftBenchmark(
     float maxPowerFrq = 0;
     float maxPower = 0;
     for (int i=0; i<(nfft/2+1); i++) {
-        float power = (float)sqrt(pow(fftBins[i].i, 2) + pow(fftBins[i].r, 2)) / (nfft/2+1);
+        float power = sqrt(pow(fftBins[i].i, 2) + pow(fftBins[i].r, 2)) / (nfft/2+1);
         if (power > maxPower) {
             maxPower = power;
             // convert bin index to frequency
