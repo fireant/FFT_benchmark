@@ -38,7 +38,7 @@ Java_com_wavelethealth_fft_1benchmark_MainActivity_fftBenchmark(
                                       NULL); // lenmem
 
     // hold fft's output
-    kiss_fft_cpx* fftBins = new kiss_fft_cpx[nfft / 2 + 1];
+    kiss_fft_cpx fftBins[nfft / 2 + 1];
 
     auto maxTime = chrono::duration<double>(0);
     auto minTime = chrono::duration<double>(100);
@@ -82,4 +82,35 @@ Java_com_wavelethealth_fft_1benchmark_MainActivity_fftBenchmark(
     }
 
     LOGD("maxPowerFrq: %f Hz, maxPower: %f", maxPowerFrq, maxPower);
+
+
+    // need to allocate memory for kissfft
+    cfg=kiss_fftr_alloc(nfft,
+                        1,     // inverse fft
+                        NULL,  // mem
+                        NULL); // lenmem
+
+    // hold ifft's output
+    kiss_fft_scalar reconstructed[nfft];
+
+    // normalize the fft ouput vector
+    // so the reconstructed signal has the same amplitude as the original signal
+    for (int i=0; i<(nfft/2+1); i++) {
+        fftBins[i].r /= nfft;
+        fftBins[i].i /= nfft;
+    }
+
+    // inverse fft to reconstruct the original signal
+    kiss_fftri(cfg, fftBins, reconstructed);
+
+    // find the max residual
+    float maxRes = 0;
+    for (int i=0; i<nfft; i++) {
+        float res = fabsf(testSignal[i] - reconstructed[i]);
+        if (res > maxRes) {
+            maxRes = res;
+        }
+    }
+    // this should give a tiny number, e.g. 0.000001
+    LOGD("maxRes: %f", maxRes);
 }
